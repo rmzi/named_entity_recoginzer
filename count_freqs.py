@@ -71,12 +71,11 @@ def get_ngrams(sent_iterator, n):
          #Then extract n-grams
          ngrams = (tuple(w_boundary[i:i+n]) for i in xrange(len(w_boundary)-n+1))
          for n_gram in ngrams: #Return one n-gram at a time
-            yield n_gram        
-
+            yield n_gram
 
 class Hmm(object):
     """
-    Stores counts for n-grams and emissions. 
+    Stores counts for n-grams and emissions.
     """
 
     def __init__(self, n=3):
@@ -163,11 +162,17 @@ class Hmm(object):
         return float(num) / denom
 
 
-    def calc_mle(self, im2, im1, i):
+    def calc_mle(self, trigram):
         """
         Calculate q(i|im2, im1)
         """
+        trigram = tuple(trigram)
+        bigram = tuple(trigram[:2])
 
+        num = self.ngram_counts[2][trigram]
+        denom = self.ngram_counts[1][bigram]
+
+        return float(num) / denom
 
 def usage():
     print """
