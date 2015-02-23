@@ -1,5 +1,5 @@
 COMSW4705 - Natural Language Processing
-Homework 1 - Ramzi Abdoch, raa2148
+Homework 1 - Ramzi Abdoch, raa214
 
 _Q4_
 
@@ -27,7 +27,7 @@ Results:
 
 	Found 14043 NEs. Expected 5931 NEs; Correct: 3117.
 
-			 precision 	recall 		F1-Score
+	 precision 	recall 		F1-Score
 	Total:	 0.221961	0.525544	0.312106
 	PER:	 0.435451	0.231230	0.302061
 	ORG:	 0.475936	0.399103	0.434146
