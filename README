@@ -1,0 +1,48 @@
+##############################################
+#											 #
+#	README									 #
+#	------									 #
+#											 #
+#	COMSW4705 - Natural Language Processing  #
+#	Homework 1 - Ramzi Abdoch, raa2148		 #
+#											 #
+##############################################
+
+_Q4_
+
+files:
+	- count_freqs.py
+	  - added function calc_emissions, per Q4a
+	  - added some class variables (all_words, word_counts)
+	- replace_rare.py
+	  - call "python replace_rare.py [counts_file] [input_file]" to run
+	  - ***CAUTION*** script operates on input_file in place
+	- tagger.py
+	  - call "python tagger.py [counts_file (after calling replace_rare.py)] [test_data_file] > [predictions_file]"
+
+how to run:
+ 1. python count_freqs.py ner_train.dat > ner.counts
+ 2. python replace_rare.py ner.counts ner_train.dat
+ 3. python count_freqs.py ner_train.dat > ner_w_rare.counts
+ 4. python tagger.py ner_w_rare.counts ner_dev.dat > preds.dat
+ 5. python eval_ne_tagger.py ner_dev.key preds.dat
+
+Observations:
+  - The vast majority of words (~82%) are _RARE_. The remaining ~18% are the only words we should calculate predictions for because the prediction will be the same for every _RARE_ word. This naive tagger does not account for position, simply counts.
+
+Results:
+
+	Found 14043 NEs. Expected 5931 NEs; Correct: 3117.
+
+			 precision 	recall 		F1-Score
+	Total:	 0.221961	0.525544	0.312106
+	PER:	 0.435451	0.231230	0.302061
+	ORG:	 0.475936	0.399103	0.434146
+	LOC:	 0.147750	0.870229	0.252612
+	MISC:	 0.491689	0.610206	0.544574
+
+	These results are fairly poor because the tagger does not take into account positional data from the training set. 
+
+_Q5_
+
+
