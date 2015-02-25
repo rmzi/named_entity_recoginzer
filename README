@@ -14,14 +14,11 @@ files:
 	  - call "python tagger.py [counts_file (after calling replace_rare.py)] [test_data_file] > [predictions_file]"
 
 how to run:
- 1. python count_freqs.py ner_train.dat > ner.counts
- 2. python replace_rare.py ner.counts ner_train.dat
- 3. python count_freqs.py ner_train.dat > ner_w_rare.counts
- 4. python tagger.py ner_w_rare.counts ner_dev.dat > preds.dat
- 5. python eval_ne_tagger.py ner_dev.key preds.dat
-
-observations:
-  - The vast majority of words (~82%) are _RARE_. The remaining ~18% are the only words we should calculate predictions for because the prediction will be the same for every _RARE_ word. This naive tagger does not account for position, simply counts.
+	1. python count_freqs.py ner_train.dat > ner.counts
+	2. python replace_rare.py ner.counts ner_train.dat
+	3. python count_freqs.py ner_train.dat > ner_w_rare.counts
+	4. python tagger.py ner_w_rare.counts ner_dev.dat > preds.dat
+	5. python eval_ne_tagger.py ner_dev.key preds.dat
 
 results:
 
@@ -34,7 +31,8 @@ results:
 	LOC:	 0.147750	0.870229	0.252612
 	MISC:	 0.491689	0.610206	0.544574
 
-	These results are fairly poor because the tagger does not take into account positional data from the training set. 
+observations:
+  - The vast majority of words (~82%) are _RARE_. The remaining ~18% are the only words we should calculate predictions for because the prediction will be the same for every _RARE_ word. It would be more efficient to cache the _RARE_ probabilities for each class. This naive tagger does not account for positional data from the training set, simply counts. As a result, These results are fairly poor. It also found much more (3x as many) NE than expected.
 
 _Q5_
 
@@ -50,10 +48,6 @@ how to run:
 	1. python viterbi.py ner.counts ner_dev.dat > preds.dat
 	2. python eval_ne_tagger.py ner_dev.key preds.dat
 
-observations:
-  - Dynamic programming is challenging to understand, but really powerful! It was a great challenge to put this together.
-  - The scores are much higher with this method. The contextual data greatly aids the classifier in determining the correct tag sequence.
-
 results:
 
 	Found 4657 NEs. Expected 5931 NEs; Correct: 3145.
@@ -65,6 +59,40 @@ results:
 	LOC:	 0.850667	0.695747	0.765447
 	MISC:	 0.750948	0.644951	0.693925
 
+observations:
+  - The scores are much higher with this method. The contextual data greatly aids the classifier in determining the correct tag sequence. It also found less NE than expected, but far less than the previous method.
+  - Dynamic programming is challenging to understand, but really powerful! It was a great challenge to put this together.
+
 _Q6_
 
 files: 
+	- group_rare.py
+		- group words based on three criteria
+		  - All caps
+		  - First letter capitalized
+		  - Numbers + punctuation
+		- call "python group_rare.py [counts_file] [training_file]" to run
+	- viterbigrouped.py
+		- call "python viterbi [counts_file] [test_data] > [predictions_file]" to run
+
+how to run:
+ 	1. python count_freqs.py ner_train.dat > ner.counts
+	2. python group_rare.py ner.counts ner_train.dat
+	3. python count_freqs.py ner_train.dat > ner_grouped_rare.counts
+	4. python viterbi_grouped.py ner_grouped_rare.counts ner_dev.dat > preds.dat
+	
+	5. python eval_ne_tagger.py ner_dev.key preds.dat
+
+results:
+
+	Found 6568 NEs. Expected 5931 NEs; Correct: 4190.
+
+		 	precision 	recall 		F1-Score
+	Total:	 0.637942	0.706458	0.670454
+	PER:	 0.579649	0.898803	0.704778
+	ORG:	 0.484397	0.510463	0.497089
+	LOC:	 0.837500	0.694111	0.759094
+	MISC:	 0.738579	0.631922	0.681100
+
+observations:
+  - Grouping the rare words with the above criteria significantly helped the recall and F1-scores of the Viterbi tagger, but the precision scores stayed the same or were slightly lower. This means if a certain word is actually tagged PER, for example, we tagged it correctly more often, but we also mistagged words inaccurately as PER more often as well.

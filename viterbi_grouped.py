@@ -7,6 +7,7 @@ import sys
 import operator
 import math
 import itertools
+import string
 
 from collections import defaultdict
 from count_freqs import Hmm
@@ -47,10 +48,12 @@ def sent_iterator(word_iterator):
 
 def usage():
     print """
-    python viterbi.py [counts_file] [test_file] > [output_file]
+    python viterbi_grouped.py [counts_file] [test_file] > [output_file]
         Read in counts_file generated from training set and
         test set of data, then predict tags for each word in
         test set.
+
+        Modification on original viterbi.py to use grouped words from _Q6_
 
         Results are stored in the following format:
 
@@ -104,7 +107,14 @@ if __name__ == "__main__":
 
             # Check if word is absent in training set or count(word) < 5, if so, use _RARE_
             if word not in counter.all_words or counter.word_counts[word] < 5:
-                word = "_RARE_"
+                if word.isupper():
+                    word = "_AC_"
+                elif word.istitle():
+                    word = "_CF_"
+                elif all(c in string.punctuation or c.isdigit() for c in word):
+                    word = "_NP_"
+                else:
+                    word = "_RARE_"
 
             # Iterate over u and v
             for u in K[k-1]:
