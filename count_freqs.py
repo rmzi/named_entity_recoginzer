@@ -98,7 +98,7 @@ class Hmm(object):
             #Sanity check: n-gram we get from the corpus stream needs to have the right length
             assert len(ngram) == self.n, "ngram in stream is %i, expected %i" % (len(ngram, self.n))
 
-            tagsonly = tuple([ne_tag for word, ne_tag in ngram]) #retrieve only the tags            
+            tagsonly = tuple([ne_tag for word, ne_tag in ngram]) #retrieve only the tags
             for i in xrange(2, self.n+1): #Count NE-tag 2-grams..n-grams
                 self.ngram_counts[i-1][tagsonly[-i:]] += 1
 
@@ -154,6 +154,8 @@ class Hmm(object):
         """
         Calculate e(word|tag)
         """
+        if word == "*":
+            return float(1)
 
         # num = # of times (word, tag) exist in training data
         num = self.emission_counts[(word, tag)]
@@ -170,9 +172,13 @@ class Hmm(object):
         bigram = tuple(trigram[:2])
 
         num = self.ngram_counts[2][trigram]
-        denom = self.ngram_counts[1][bigram]
 
-        return float(num) / denom
+        if float(num) == 0.0:
+            return float(num)
+        else:
+            # denom = # of times tag exists in training data
+            denom = self.ngram_counts[1][bigram]
+            return float(num) / denom
 
 def usage():
     print """

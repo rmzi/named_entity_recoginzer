@@ -6,6 +6,7 @@ __date__ ="$Feb 19, 2015"
 import sys
 import operator
 import math
+import itertools
 
 from collections import defaultdict
 from count_freqs import Hmm
@@ -20,7 +21,7 @@ def word_iterator(corpus_file):
         line = l.strip()
         if line:
             yield line
-        else
+        else:
             yield None
         l = corpus_file.readline()
 
@@ -29,7 +30,7 @@ def sent_iterator(word_iterator):
     Returns an iterator that yields one sentence at a time from test data
     """
     current_sentence = [] #Buffer for the current sentence
-    for l in corpus_iterator:
+    for l in word_iterator:
             if l==None:
                 if current_sentence:  #Reached the end of a sentence
                     yield current_sentence
@@ -44,26 +45,9 @@ def sent_iterator(word_iterator):
         yield current_sentence  #Otherwise when there is no more token
                                 # in the stream return the last sentence.
 
-def get_trigrams(sent_iterator):
-    """
-    Get a generator that returns trigrams over the entire corpus,
-    respecting sentence boundaries and inserting boundary tokens.
-    Sent_iterator is a generator object whose elements are lists
-    of tokens.
-    """
-    for sent in sent_iterator:
-         #Add boundary symbols to the sentence
-         w_boundary = (2) * ["*"]
-         w_boundary.extend(sent)
-         w_boundary.append("STOP")
-         #Then extract trigrams
-         ngrams = (tuple(w_boundary[i:i+3]) for i in xrange(len(w_boundary)-2))
-         for n_gram in ngrams: #Return one n-gram at a time
-            yield n_gram
-
 def usage():
     print """
-    python viterbi.py [counts_file] [input_file] > [output_file]
+    python viterbi.py [counts_file] [test_file] > [output_file]
         Read in counts_file generated from training set and
         test set of data, then predict tags for each word in
         test set.
@@ -88,54 +72,77 @@ if __name__ == "__main__":
 
     # Initialize a trigram counter
     counter = Hmm(3)
+
     # Read in counts
     counter.read_counts(counts_file)
 
-    # Iterate over all sentences
+    # Iterate over all test sentences
+    test_sent_iterator =  sent_iterator(word_iterator(test_file))
+    for sentence in test_sent_iterator:
+        # Viterbi Algorithm
+        n = len(sentence)
 
+        pad_sent = (2) * ["*"]
+        pad_sent.extend(sentence)
+        pad_sent.append("STOP")
 
+        # Initialize
+        # K[0], K[-1] = "*", K[1...n] = all_states
+        K = ["*"] + (n) * [counter.all_states] + ["*"]
 
-    # Viterbi Algorithm
+        # pi[k](u,v) -- n by len(K[k])
+        pi = [defaultdict(float) for i in xrange(n + 1)]
 
-    # Initialize
-    # K[0], K[-1] = "*", K[1...n] = all_states
-    K = ["*"] + [counter.all_states] + ["*"]
+        # pi[0](u,v)
+        pi[0][("*","*")] = 1.0
 
-    # pi[k](u,v) -- n by len(K[k])
-    pi = [defaultdict(float) for i in xrange(counter.)]
+        # Assign all values in pi table
+        for k in xrange(1, n+1):
 
-    # pi[0]
+            word = pad_sent[k+1]
+            original_word = pad_sent[k+1]
 
-    # Iterate through words in test data and calculate the log probability of each tag.
-    for line in test_file:
-        word = line.strip()
-
-        if word: # Nonempty line
-            original_word = word
-            # Check if word is absent in training set, if so, use _RARE_
+            # Check if word is absent in training set or count(word) < 5, if so, use _RARE_
             if word not in counter.all_words or counter.word_counts[word] < 5:
                 word = "_RARE_"
 
-            # Initialize dict to hold emission values
-            candidates = defaultdict(float)
+            for u in K[k-1]:
+                for v in K[k]:
 
-            # Iterate through tags
-            for tag in counter.all_states:
+                    # Find max over w in K[k-2]
+                    w_candidates = defaultdict(float)
 
-                prob = counter.calc_emissions(word, tag)
+                    for w in K[k-2]:
+                        w_candidates[w] = pi[k-1][(w,u)] * counter.calc_mle([w,u,v]) * counter.calc_emissions(word,v)
 
-                # Make sure not to do log(0)
-                if prob == 0.0:
-                    candidates[tag] = float("-inf")
-                else:
-                    candidates[tag] = math.log(prob)
+                    final_w = max(w_candidates.iteritems(), key=operator.itemgetter(1))
 
-            # Get argmax of candidates
-            pred = max(candidates.iteritems(), key=operator.itemgetter(1))[0]
+                    # Assign pi value
+                    pi[k][(u,v)] = final_w[1]
 
-            # Write prediction to output file
-            sys.stdout.write("%s %s %s\n" % (original_word, pred, str(candidates[pred])))
-        else:
-            print ""
+            # Get the (tag, probability) of v in max(pi[k](u,v))
+            final_k_idx = max(pi[k].iteritems(), key=operator.itemgetter(1))
+
+            prob = final_k_idx[1]
+            # Log probability
+            log_prob = math.log(prob)
+            # Ouput format: word, tag, log probability
+            sys.stdout.write("%s %s %s\n" % (original_word, final_k_idx[0][1], log_prob))
+
+        # Find final max over u, v
+        final_candidates = defaultdict(float)
+
+        # Permute each pair of values for u in K[n-1] v and K[n-2]
+        perms = itertools.product(K[n-1], K[n])
+
+        # Iterate through permutations and calculate pi values
+        for perm in perms:
+            final_candidates[perm] = pi[n][perm] * counter.calc_mle(list(perm + ("STOP",)))
+
+        # Calculate final probability for the sentence
+        # ** Do not output to predictions file **
+        final_sent_prob_idx = max(final_candidates.iteritems(), key=operator.itemgetter(1))
+
+        print ""
 
 
